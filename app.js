@@ -1,11 +1,26 @@
-async function fetchAllData(object) {
-    const response = await fetch('https://be.ta19heinsoo.itmajakas.ee/api/' + object, {});
-    const json = await response.json();
+const teacherList = document.getElementById('teacherList');
+const roomList = document.getElementById('roomList');
+const groupList = document.getElementById('groupList');
+const searchBar = document.getElementById('searchBar');
 
-    return json;   
-}
+let teachers;
+let groups;
+let rooms;
+let weeks;
+
+(async () => {
+    let response = await fetch('https://be.ta19heinsoo.itmajakas.ee/api/teachers');
+    teachers = await response.json();
+    let response2 = await fetch('https://be.ta19heinsoo.itmajakas.ee/api/rooms');
+    rooms = await response2.json();
+    let response3 = await fetch('https://be.ta19heinsoo.itmajakas.ee/api/groups');
+    groups = await response3.json();
+    let response4 = await fetch('https://be.ta19heinsoo.itmajakas.ee/api/weeks');
+    weeks = await response4.json();
+})()
 
 function timeTableQuery(object, index, day) {
+    console.log("works");
     fetch('https://be.ta19heinsoo.itmajakas.ee/api/'+ object + index)
         .then(response => response.json())
         .then(data =>
@@ -31,56 +46,74 @@ function timeTableQuery(object, index, day) {
             )
 }
 
-function getWeekNumber(d) {
-    // Copy date so don't modify original
-    d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
-    // Set to nearest Thursday: current date + 4 - current day number
-    // Make Sunday's day number 7
-    d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay()||7));
-    // Get first day of year
-    var yearStart = new Date(Date.UTC(d.getUTCFullYear(),0,1));
-    // Calculate full weeks to nearest Thursday
-    var weekNo = Math.ceil(( ( (d - yearStart) / 86400000) + 1)/7);
-    // Return array of year and week number
-    return [d.getUTCFullYear(), weekNo];
-}
+setTimeout(() => {
 
-function findResults(object) {
-    let results = [];
+    function findWeek(){
+        let today = Date.parse(new Date());
+        let result;
+        weeks.forEach(function(item) {
+            if (Date.parse(item.start) < today && Date.parse(item.end) > today) {
+                result = item.weekNr;
+            }
+        })
+
+        return result;
+    }
+
     
-    fetchAllData("teachers").then(data => 
-        data.forEach(function(item){
+
+    function findResults(object, week, day) {
+        teacherList.innerHTML = "";
+        roomList.innerHTML = "";
+        groupList.innerHTML = "";
+
+        teachers.forEach(function(item){    
             if (item.firstname.includes(object) || item.lastname.includes(object)){
-                results.push(item);
+                teacherList.innerHTML += `
+                    <li>
+                        <button onclick='timeTableQuery("lessons/teachers=${item.teacherId}&weeks=",${week}, ${day})'>
+                            ${item.firstname} ${item.lastname}
+                        </button>
+                    </li>`;
             }
         }
-    ));
-    
-    fetchAllData("rooms").then(data => 
-        data.forEach(function(item){
+        );
+        
+        rooms.forEach(function(item){
+            rooms.push(item);
             if (item.code.includes(object)){
-                results.push(item);
+                roomList.innerHTML += `
+                    <li>
+                        <button onclick='timeTableQuery("lessons/rooms=${item.roomId}&weeks=",${week}, ${day})'>
+                            ${item.code}
+                        </button>
+                    </li>`;
             }
         }
-    ));
-    
-    fetchAllData("groups").then(data => 
-        data.forEach(function(item){
+        );
+        
+        groups.forEach(function(item){
+            groups.push(item);
             if (item.groupCode.includes(object)){
-                results.push(item);
+                groupList.innerHTML += `
+                    <li>
+                        <button onclick='timeTableQuery("lessons/groups=${item.groupId}&weeks=",${week}, ${day})'>
+                            ${item.groupCode}
+                        </button>
+                    </li>`;
             }
         }
-    ));
+        );
+    }
 
-    return results;
-}
+    let currentWeek = findWeek();
+    let today = new Date();
+    let weekDay = today.getDay();
 
-console.log(findResults("TA"));
+    searchBar.addEventListener('keyup', (e) => {
+        const searchString = e.target.value;
+        findResults(searchString, currentWeek, weekDay);
+    });
+    
 
-
-const weekDifference = 36;
-let result = getWeekNumber(new Date());
-let currentWeek = Math.abs(weekDifference - parseInt(result[1]));
-
-// query, schoolweek number, (0-6) sunday to saturday
-timeTableQuery("lessons/rooms=4356&weeks=", currentWeek, 3);
+}, 1500);
