@@ -1,14 +1,15 @@
-function fetchAllData(object) {
-    fetch('https://be.ta19heinsoo.itmajakas.ee/api/' + object)
-        .then(response => response.json())
-        .then(data => console.log(data));
+async function fetchAllData(object) {
+    const response = await fetch('https://be.ta19heinsoo.itmajakas.ee/api/' + object, {});
+    const json = await response.json();
+
+    return json;   
 }
 
 function timeTableQuery(object, index, day) {
     fetch('https://be.ta19heinsoo.itmajakas.ee/api/'+ object + index)
         .then(response => response.json())
         .then(data =>
-            data.timetableEvents.forEach(function(item, index){
+            data.timetableEvents.forEach(function(item){
                 //finding the day of the item
                 let date = new Date(item.date);
 
@@ -44,13 +45,42 @@ function getWeekNumber(d) {
     return [d.getUTCFullYear(), weekNo];
 }
 
+function findResults(object) {
+    let results = [];
+    
+    fetchAllData("teachers").then(data => 
+        data.forEach(function(item){
+            if (item.firstname.includes(object) || item.lastname.includes(object)){
+                results.push(item);
+            }
+        }
+    ));
+    
+    fetchAllData("rooms").then(data => 
+        data.forEach(function(item){
+            if (item.code.includes(object)){
+                results.push(item);
+            }
+        }
+    ));
+    
+    fetchAllData("groups").then(data => 
+        data.forEach(function(item){
+            if (item.groupCode.includes(object)){
+                results.push(item);
+            }
+        }
+    ));
+
+    return results;
+}
+
+console.log(findResults("TA"));
+
+
 const weekDifference = 36;
 let result = getWeekNumber(new Date());
 let currentWeek = Math.abs(weekDifference - parseInt(result[1]));
 
 // query, schoolweek number, (0-6) sunday to saturday
 timeTableQuery("lessons/rooms=4356&weeks=", currentWeek, 3);
-
-let teachers = fetchAllData("teachers");
-let rooms = fetchAllData("rooms");
-let groups = fetchAllData("groups");
